@@ -3,6 +3,7 @@ var express = require('express'),
     fetchController = require('../controllers')
 
 router
-  .post('/fetch', fetchController)
+  .get('/fetch', fetchController.fetch)
+  .get('/modify', fetchController.modify)
 
 module.exports = router
