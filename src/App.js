@@ -228,6 +228,14 @@ function App({fetch, tableDatas = []}) {
             })
     }
 
+    const toModify = () => {
+        setLoading(true);
+        request({url: '/modify', method: 'GET'})
+            .then(response => {
+                setLoading(false);
+            })
+    }
+
     return (
         <div className="App">
             <header className="App-header">
@@ -250,6 +258,9 @@ function App({fetch, tableDatas = []}) {
                     </div>
                     <div>
                         <button onClick={onView} Style = {{color:'white'}}>view uploaded data</button>
+                    </div>
+                    <div>
+                        <button onClick={() => toModify()}>Modify</button>
                     </div>
                     <div>
                         <a href='https://testnet.bscscan.com/address/0xB9A3e6815AC817330499C6AF4577D83794c4C87b#code' target="_blank" style={{color:'#FFFFFF'}}>view contract</a>
