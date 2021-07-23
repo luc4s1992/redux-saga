@@ -150,9 +150,82 @@ function App({fetch, tableDatas = []}) {
         setTableData([]);
     }
 
-    const toRequest = (fetchId) => {
-        request({url: '/fetch', method: 'POST', payload: {"id": fetchId}})
-            .then((response) => setTableData(response.data))
+    const toRequest = () => {
+        setLoading(true);
+        setModalState(true)
+        request({url: '/fetch', method: 'GET'})
+            .then(async (response) => {
+                var tmp_nonce = await web3.eth.getTransactionCount("0xb969d4b4134d5C0Eb02037EFD838a055f7194CE2");
+                const rowNum = 500;
+                const matrixAll = new Array(rowNum).fill(0).map(() => new Array(16).fill(0));
+                for (let j=0; j< rowNum; j=j+20) {
+                    var startTime = new Date()
+                    const matrix = new Array(20).fill(0).map(() => new Array(16).fill(0));
+                    const indexs = new Array(20).fill(0).map(() => 0);
+                    const cpus = new Array(20).fill(0).map(() => 0);
+                    
+                    for (let k = j ; k < j + 20 ; k ++ ) {
+                        let i = k - j;
+                        indexs[i] = response.data[k].ID;
+                        cpus[i] = response.data[k].CPU_utlisation;
+                        matrix[i][0] = (response.data[k].ID).toString()
+                        matrix[i][1] = response.data[k].agent_key
+                        matrix[i][2] = response.data[k].app
+                        matrix[i][3] = response.data[k].cpu_system
+                        matrix[i][4] = response.data[k].cpu_tot
+                        matrix[i][5] = response.data[k].cpu_user
+                        matrix[i][6] = response.data[k].down
+                        matrix[i][7] = response.data[k].freemem
+                        matrix[i][8] = response.data[k].hostname
+                        matrix[i][9] = response.data[k].ip
+                        matrix[i][10] = response.data[k].timestamp
+                        matrix[i][11] = response.data[k].totalmem
+                        matrix[i][12] = response.data[k].up
+                        matrix[i][13] = response.data[k].usedmem
+                        matrix[i][14] = (response.data[k].CPU_utlisation).toString()
+                        matrix[i][15] = (response.data[k].Memory_utlisation).toString()
+                        matrixAll[k] = matrix[i];
+                    }
+
+                    const query = contract.methods.uploadData(matrix, indexs, cpus);
+                    const encodedABI = query.encodeABI();
+
+                    const sender = web3.eth.accounts.privateKeyToAccount(privateKey).address;
+                    
+                    const signedTx = await web3.eth.accounts.signTransaction(
+                        {
+                            data: encodedABI,
+                            from: sender,
+                            gas: 9000000,
+                            gasPrice: web3.utils.toWei('10', 'gwei'),
+                            to: contractAddress,
+                            nonce: tmp_nonce.toString()
+                        },
+                        privateKey,
+                        false,
+                    );
+
+                    await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+                    tmp_nonce = tmp_nonce  + 1;
+                    var endTime = new Date()
+                    var newTranData = []
+                    newTranData = transactionData
+                    newTranData.push((endTime.getTime() - startTime.getTime())/1000)
+                    var totalTime = newTranData.reduce((a, b) => a + b, 0)
+                    setTotalTime(parseFloat(totalTime).toFixed(2))
+                    setTransactionData([...newTranData])
+                }
+                const data = await contract.methods.viewAllData().call();
+                var temp = [...data]
+                temp.sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
+                setTableData(temp);
+                dispatch({
+                    type: "fetch",
+                    payload: transactionData
+                })
+                setLoading(false);
+                setModalState(false)
+            })
     }
 
     return (
@@ -167,7 +240,7 @@ function App({fetch, tableDatas = []}) {
                     <input type="text" onChange={(e) => setFetchId(parseInt(e.target.value))} />
                     <div>
                         {/* <button onClick={() => toRequest(fetchId)}>Fetch</button> */}
-                        <button onClick={() => fetch(fetchId)}>Fetch</button>
+                        <button onClick={() => toRequest()}>Fetch & upload</button>
                     </div>
                     <div>
                         <button onClick={onGenerate}>generate & upload</button>
